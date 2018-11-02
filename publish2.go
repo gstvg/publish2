@@ -199,6 +199,9 @@ func enablePublishMode(res resource.Resourcer) {
 			})
 
 			getVersionsCount := func(record interface{}, context *admin.Context) interface{} {
+				if _,ok := record.(VersionableInterface); !ok {
+					return 1
+				}
 				var (
 					count        int
 					db           = context.GetDB().Set(VersionNameMode, "").Set(VersionMode, VersionMultipleMode)
@@ -232,6 +235,14 @@ func enablePublishMode(res resource.Resourcer) {
 					primaryField = scope.PrimaryField()
 					newrecord    = reflect.New(utils.ModelType(record)).Interface()
 				)
+
+				if _, ok := record.(VersionableInterface); !ok {
+					if publishReadable, ok := record.(PublishReadyInterface); ok && publishReadable.GetPublishReady() {
+						return "live"
+					} else {
+						return ""
+					}
+				}
 
 				if !db.First(newrecord, fmt.Sprintf("%v = ?", scope.Quote(primaryField.DBName)), primaryField.Field.Interface()).RecordNotFound() {
 					if oldVersion, ok := record.(VersionableInterface); ok {
